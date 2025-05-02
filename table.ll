@@ -28,7 +28,7 @@
 #   > Transition 3 accepts characters B and C, moves to state eg_4; and
 #     performs action 1.
 
-start f,F:foo_1:1,2 b,B:barbaz_1:1 q,Q:qux_1:1,5 *:end:
+start f,F:foo_1:1,2 b,B:barbaz_1:1 q,Q:qux_1:1,5  :start: *:end:
 
 #foo states
 foo_1 o,O:foo_2:1

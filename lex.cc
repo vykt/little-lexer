@@ -8,23 +8,21 @@
 #include "lex.hh"
 
 
-std::string lex::lexer::read_input(const std::string input_path) const {
 
-    const constexpr int page_size = 4096;
-    char buf[page_size];
-    std::string out;
+void lex::lex_state::add_token() {
 
-    std::ifstream ifs(input_path);
-    if (ifs.is_open() == false) {
-        return "";
-    }
+    tokens.emplace_back(lex::token(this->cur_kind, this->cur_lexeme));
+    this->cur_lexeme.clear();
 
-    while (ifs.read(buf, page_size) || ifs.gcount() > 0) {
-        out.append(buf, ifs.gcount());
-    }
+    return;
+}
 
-    ifs.close();
-    return out;
+
+void lex::lexer::lex() {
+
+    this->dfa.evaluate(&this->ls);
+
+    return;
 }
 
 

@@ -19,16 +19,23 @@ enum type {
 };
 
 
-class token {
+std::map<enum type, std::string> typetab() {
+    return {
+        {FOO, "FOO"},
+        {BAR, "BAR"},
+        {BAZ, "BAZ"},
+        {QUX, "QUX"}
+    };
+}
 
-  _PRIVATE:
-    //attributes
+
+struct token {
+
     const enum type kind;
     const std::string lexeme;
 
-  public:
-    //methods
-    token(const enum type kind) : kind(kind) {}
+    token(const enum type kind, const std::string lexeme)
+    : kind(kind), lexeme(lexeme) {}
 };
 
 
@@ -42,6 +49,8 @@ class lex_state {
 
   public:
     //methods
+    std::vector<struct token> & get_tokens() { return tokens; };
+
     // -- produce new token
     void add_token();
 
@@ -59,17 +68,18 @@ class lexer {
   _PRIVATE:
     //attributes
     lex_state ls;
-    dfa::dfa d;
+    dfa::automata dfa;
 
     //methods
-    std::string read_input(const std::string input_path) const;
+    void read_input(const std::string input_path);
 
   public:
     //methods
     lexer(const std::string transition_table_path,
           const std::string input_path)
-    : d(dfa::dfa(transition_table_path, read_input(input_path), lex_actions)) {}
+    : dfa(dfa::automata(transition_table_path, input_path, lex_actions)) {}
     void lex();
+    std::vector<struct token> & get_tokens() { return ls.get_tokens(); }
 };
 
 
