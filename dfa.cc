@@ -11,6 +11,8 @@
 #include "common.hh"
 #include "dfa.hh"
 
+//TODO DEBUG
+#include <iostream>
 
 
 /*
@@ -18,7 +20,7 @@
  */
 
 const struct dfa::transition & dfa::dfa::get_transition(
-    const ::dfa::state & node, char ch) const {
+    const ::dfa::state_t & node, char ch) const {
 
     //for every key
     for (auto key_it = node.cbegin(); key_it != node.cend(); ++key_it) {
@@ -54,6 +56,20 @@ const struct dfa::transition & dfa::dfa::get_transition(
 /*
  *  --- [DFA] ---
  */
+
+//control characters
+#define _EOF '@'
+#define _SEC_DELIM '$'
+#define _TRN_DELIM '~'
+
+
+_STATIC _INLINE bool allow_char(char ch) {
+
+    if ((ch == _SEC_DELIM) || (ch == _TRN_DELIM)) return false;
+    if ((ch >= 0x20) && (ch <= 0x7e)) return true;
+    if ((ch >= 0x9) && (ch <= 0xd)) return true; 
+    return false;
+}
 
 
 std::string dfa::dfa::read_input(const std::string & path) {
@@ -105,14 +121,14 @@ std::vector<std::string> dfa::dfa::read_table(const std::string & path) {
 char dfa::dfa::next_char(std::string::const_iterator & cur,
                          std::string::const_iterator & end) {
 
-    if (cur == end) return '\0';
+    if (cur == end) return _EOF;
     char ch = *cur;
     bool escape = (*cur == '\\') ? true : false;
     
     ++cur;
     if (escape == false) return ch;
 
-    if (cur == end) return '\0';
+    END_THROW(cur, end)
     ch = *cur;
     cur++;
     
@@ -123,10 +139,7 @@ char dfa::dfa::next_char(std::string::const_iterator & cur,
         case 'v': return '\v';
         case 'r': return '\r';
         case 'f': return '\f';
-        case 'b': return '\b';
-        case 'a': return '\a';
         case '\\': return '\\';
-        case '*': return '*'; 
         default: throw std::runtime_error("Improper escape character.");
     }
 }
@@ -140,24 +153,22 @@ std::string dfa::dfa::next_symbol(std::string::const_iterator & cur,
 
     //if reached end of line before the delimeter
     if (sym_end == end) {
-        sym_end--;
         std::string sym(cur, sym_end);
         if (sym == "end") return sym;
         BAD_THROW("symbol EOL")
 
     //else reached the delimeter
     } else {
-        std::string sym(cur, sym_end--);
+        std::string sym(cur, sym_end);
         cur = sym_end;
-        cur++;
         cur++;
         return sym;
     }
 }
 
 
-dfa::key dfa::dfa::next_key(std::string::const_iterator & cur,
-                            std::string::const_iterator & end) {
+dfa::key_t dfa::dfa::next_key(std::string::const_iterator & cur,
+                              std::string::const_iterator & end) {
 
     using one_key = std::variant<char, std::pair<char, char>>;
     using range = std::pair<char, char>;
@@ -172,7 +183,7 @@ dfa::key dfa::dfa::next_key(std::string::const_iterator & cur,
     };
     enum last last = START;
 
-    key key;
+    key_t key;
     one_key _key;
 
 
@@ -182,7 +193,7 @@ dfa::key dfa::dfa::next_key(std::string::const_iterator & cur,
         char ch = this->next_char(cur, end);
 
         switch (ch) {
-            case ':':
+            case _SEC_DELIM:
                 if (last == CHAR) {
                     key.emplace_back(_key);
                     goto _next_key_done;
@@ -192,20 +203,20 @@ dfa::key dfa::dfa::next_key(std::string::const_iterator & cur,
                 goto _next_key_done;
             
             case '-':
-                if (last != CHAR) BAD_THROW("key")
+                if (last != CHAR) BAD_THROW("key - invalid format")
                 last = RANGE;
                 break;
 
             case ',':
-                if (last != CHAR) BAD_THROW("key")
+                if (last != CHAR) BAD_THROW("key - invalid format")
                 key.emplace_back(_key);
                 _key = '\0';
                 last=COMMA;
                 break;
 
             default:
-                if ((ch < 0x30) || (ch > 0x7d) || (HAS(range, _key)))
-                    BAD_THROW("key")
+                if (!allow_char(ch) || (HAS(range, _key)))
+                    BAD_THROW("key - invalid character")
 
                 if (HAS(char, _key) && std::get<char>(_key) != 0)
                     _key = range(std::get<char>(_key), ch);
@@ -242,8 +253,8 @@ std::vector<int> dfa::dfa::next_actions(std::string::const_iterator & cur,
 
         char ch = this->next_char(cur, end);
 
-        //if reached EOL
-        if (ch == '\0') {
+        //if reached next transaction or EOL
+        if (ch == _TRN_DELIM || ch == _EOF) {
             switch (last) {
                 case START:
                     goto _next_actions_done;
@@ -258,6 +269,7 @@ std::vector<int> dfa::dfa::next_actions(std::string::const_iterator & cur,
         if (last == COMMA || last == START) {
             if ((ch < 0x30) || (ch > 0x39)) BAD_THROW("actions - not a digit")
             idx = std::string() + ch;
+            last = DIGIT;
         } else if (last == DIGIT) {
             if (ch == ',') {
                 actions.push_back(std::stoi(idx));
@@ -275,17 +287,17 @@ std::vector<int> dfa::dfa::next_actions(std::string::const_iterator & cur,
 }
 
 
-dfa::symtab dfa::dfa::build_symtab(const std::string & path) {
+dfa::symtab_t dfa::dfa::build_symtab(const std::string & path) {
 
     auto lines = this->read_table(path);
-    ::dfa::symtab symtab;
+    ::dfa::symtab_t symtab;
 
     int idx = 0;
     for (auto line_it = lines.cbegin(); line_it != lines.cend(); ++line_it) {
 
         auto cur = line_it->cbegin();
         auto end = line_it->cend();
-        std::string sym = this->next_symbol(cur, end, ' ');
+        std::string sym = this->next_symbol(cur, end, _TRN_DELIM);
     
         if (symtab.find(sym) == this->symtab.end()) {
             symtab.emplace(sym, idx);
@@ -299,166 +311,80 @@ dfa::symtab dfa::dfa::build_symtab(const std::string & path) {
 }
 
 
-dfa::table dfa::dfa::build_table(const std::string & path) {
+dfa::table_t dfa::dfa::build_table(const std::string & path) {
 
     /*
-     *  Behold, the inline parser.
+     *  Behold, the (formerly) inline parser.
      */
 
     auto lines = this->read_table(path);
-
-    #define NEXT_CHAR str_it++; END_THROW(str_it)
-
-    std::map<int, ::dfa::state> state_table;
+    std::map<int, ::dfa::state_t> state_table;
     int state_idx = 0;
     
     for (auto line_it = lines.cbegin(); line_it != lines.cend(); ++line_it) {
 
-        //own symbol
-        auto str_it = line_it->cbegin();
-        auto sym_end = std::find(str_it, line_it->cend(), ' ');
-        END_THROW(sym_end);
-        
-        std::string from_sym(line_it->cbegin(), sym_end--);
+        state_t state;
+        auto cur = line_it->cbegin();
+        auto end = line_it->cend();
+
+        auto from_sym = this->next_symbol(cur, end, _TRN_DELIM);
         auto from_idx_it = this->symtab.find(from_sym);
         if (from_idx_it == this->symtab.end())
             throw std::runtime_error("Symbol not found.");
+        if (from_sym == "end") goto _build_table_done;
 
-        str_it = sym_end;
-        NEXT_CHAR
-        NEXT_CHAR
+        //every transition
+        while (cur != end) {
 
+            key_t key = this->next_key(cur, end);
 
-        dfa::state state;
-
-        //every state transition
-        while (str_it != line_it->cend()) {
-
-            //state transition keys
-            key key;
-            std::variant<char, std::pair<char, char>> range;
-            bool run_loop = true;
-        
-            while (run_loop) {
-
-                range = *str_it;
-                NEXT_CHAR
-
-                switch (*str_it) {
-                    case ':':
-                        key.emplace_back(range);
-                        run_loop = false;
-                        break;
-                    
-                    case '-':
-                        NEXT_CHAR
-                        range = std::pair<char, char>
-                                    (std::get<char>(range), *str_it);
-                        key.emplace_back(range);
-                        NEXT_CHAR;
-                        if (*str_it == ':')
-                            run_loop = false;
-                        if (*str_it != ',')
-                            throw std::runtime_error("Invalid range");
-                        NEXT_CHAR;
-                        break;
-
-                    case ',':
-                        key.emplace_back(range);
-                        NEXT_CHAR;
-                        break;
-
-                    default:
-                        throw std::runtime_error("Invalid range.");    
-                } //end switch
-            
-            } //end while
-
-            NEXT_CHAR
-
-
-            //next state
-            sym_end = std::find(str_it, line_it->cend(), ':');
-            END_THROW(sym_end);
-            std::string to_sym(str_it, sym_end--);
+            auto to_sym = this->next_symbol(cur, end, _SEC_DELIM);
             auto to_idx_it = this->symtab.find(to_sym);
             if (to_idx_it == this->symtab.end())
                 throw std::runtime_error("Symbol not found.");
-            str_it = sym_end;
-            NEXT_CHAR
 
+            auto actions = next_actions(cur, end);
 
-            //actions
-            std::vector<int> action_idxs;
-            std::string idx;
-            run_loop = true;
-
-            //skip if end-of-line & no actions
-            str_it++;
-            if (str_it != line_it->cend()) {
-
-                while(run_loop) {
-
-                    idx = "";
-                    if (*str_it == ' ') { NEXT_CHAR; break; }
-                    idx += *str_it;
-
-                    do {
-                        str_it++;
-                        if (str_it == line_it->cend()) { run_loop = false; break; }
-                        else if (*str_it == ' ') { NEXT_CHAR; run_loop = false; break; }
-                        else if (*str_it >= 0x30 && *str_it <= 0x39) idx += *str_it;
-                        else if (*str_it == ',') { NEXT_CHAR; break; }
-                    } while (true);
-
-                    action_idxs.push_back(std::stoi(idx));
-            
-                } //end while
-            } //end if
-
-            //construct the transition
-            struct transition transition(from_idx_it->second,
-                                         to_idx_it->second,
-                                         action_idxs);
+            transition transition(
+                           from_idx_it->second, to_idx_it->second, actions);
             state.emplace(key, transition);
 
-        } //end while (every transition)
+        } //end while
 
-
+        _build_table_done:
         //add state to state table
         state_table[state_idx] = state;
         ++state_idx;
 
-    } //end for (every line)
+    } //end for
 
     return state_table;
 }
 
 
+void dfa::dfa::evaluate(void * ctx) {
 
-void dfa::automata::evaluate(void * ctx) {
-
-    #define STATE_THROW if(current == this->table.cend()) \
+    #define STATE_THROW if(state == this->table.cend()) \
                           throw std::runtime_error("Invalid state reached.");
 
-    auto str_it = this->input.cbegin();
-    auto current = this->table.find(0);
+    auto cur = this->input.cbegin();
+    auto state = this->table.find(0);
     STATE_THROW
 
     //while there is input available
-    while (str_it != this->input.cend()) {
+    while (cur != this->input.cend()) {
 
         //get appropriate transition
-        auto & transition = this->get_transition(current->second, *str_it);
+        auto & transition = this->get_transition(state->second, *cur);
 
         //run each action for this transition
-        for (auto act_it = transition.action_idxs.cbegin();
-             act_it != transition.action_idxs.cend(); ++act_it) {
-            this->actions[*act_it](*str_it, ctx);
+        for (auto act = transition.actions.cbegin();
+             act != transition.actions.cend(); ++act) {
+            this->actions[*act](*cur, ctx);
         }
 
         //change state
-        current = this->table.find(transition.to_idx);
+        state = this->table.find(transition.to_idx);
         STATE_THROW
         
     } //end while

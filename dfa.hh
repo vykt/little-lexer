@@ -19,20 +19,20 @@ struct transition {
 
     //attributes
     const int from_idx, to_idx;
-    const std::vector<int> action_idxs;
+    const std::vector<int> actions;
 
     //methods
     transition(const int from_idx,
                const int to_idx,
-               const std::vector<int> & action_idxs)
-     : from_idx(from_idx), to_idx(to_idx), action_idxs(action_idxs) {}
+               const std::vector<int> & actions)
+     : from_idx(from_idx), to_idx(to_idx), actions(actions) {}
 };
 
 
-using key = std::vector<std::variant<char, std::pair<char, char>>>;
-using state = std::map<key, transition>;
-using symtab = std::map<std::string, int>;
-using table = std::map<int, state>;
+using key_t = std::vector<std::variant<char, std::pair<char, char>>>;
+using state_t = std::map<key_t, transition>;
+using symtab_t = std::map<std::string, int>;
+using table_t = std::map<int, state_t>;
 
 
 class dfa {
@@ -48,21 +48,21 @@ class dfa {
     std::string next_symbol(std::string::const_iterator & cur,
                             std::string::const_iterator & end,
                             char delim);
-    key next_key(std::string::const_iterator & cur,
+    key_t next_key(std::string::const_iterator & cur,
                  std::string::const_iterator & end);
     std::vector<int> next_actions(std::string::const_iterator & cur,
                                   std::string::const_iterator & end);
 
-    symtab build_symtab(const std::string & path);
-    table build_table(const std::string & path);
+    symtab_t build_symtab(const std::string & path);
+    table_t build_table(const std::string & path);
 
-    const transition & get_transition(const state & node, char ch) const;
+    const transition & get_transition(const state_t & node, char ch) const;
 
   public:
     //attributes
-    const symtab symtab;
+    const symtab_t symtab;
     const std::vector<std::function<void(char, void *)>> actions;
-    const std::map<int, state> table;
+    const std::map<int, state_t> table;
     const std::string input;
 
     //methods

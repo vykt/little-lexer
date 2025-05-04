@@ -68,7 +68,7 @@ class lexer {
   _PRIVATE:
     //attributes
     lex_state ls;
-    dfa::automata dfa;
+    dfa::dfa dfa;
 
     //methods
     void read_input(const std::string input_path);
@@ -77,7 +77,7 @@ class lexer {
     //methods
     lexer(const std::string transition_table_path,
           const std::string input_path)
-    : dfa(dfa::automata(transition_table_path, input_path, lex_actions)) {}
+    : dfa(dfa::dfa(transition_table_path, input_path, lex_actions)) {}
     void lex();
     std::vector<struct token> & get_tokens() { return ls.get_tokens(); }
 };

@@ -27,19 +27,26 @@
 #
 #   > Transition 3 accepts characters B and C, moves to state eg_4; and
 #     performs action 1.
+#
+# Special characters:
+#
+# ~ - section separator 
+# $ - transition section separator
+# @ - EOF
+#
 
-start f,F:foo_1:1,2 b,B:barbaz_1:1 q,Q:qux_1:1,5  :start: *:end:
+start~f-g,F,\n$foo_1$10,2~b,B$barbaz_1$1~q,Q$qux_1$1,5~ $start$~@$end$
 
 #foo states
-foo_1 o,O:foo_2:1
-foo_2  :start:1,0
+foo_1~o,O$foo_2$1
+foo_2~o,O$start$1,0
 
 #bar & baz states
-barbaz_1 a,A:barbaz_2:1
-barbaz_2 r,R:start:1,3,0 z,Z:start:1,4,0
+barbaz_1~a,A$barbaz_2$1
+barbaz_2~r,R$start$1,3,0~z,Z$start$1,4,0
 
 #qux states
-qux_1 u,U:qux_2:1
-qux_2 x,X:start
+qux_1~u,U$qux_2$1
+qux_2~x,X$start$1,0
 
 end
