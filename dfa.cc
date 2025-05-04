@@ -1,4 +1,3 @@
-
 //STL
 #include <vector>
 #include <variant>
@@ -14,11 +13,15 @@
 
 
 
-const struct dfa::transition & dfa::state::get_transition(char ch) const {
+/*
+ *  --- [TRANSITION] ---
+ */
+
+const struct dfa::transition & dfa::dfa::get_transition(
+    const ::dfa::state & node, char ch) const {
 
     //for every key
-    for (auto key_it = this->transitions.cbegin();
-         key_it != this->transitions.cend(); ++key_it) {
+    for (auto key_it = node.cbegin(); key_it != node.cend(); ++key_it) {
 
         auto key = key_it->first;
 
@@ -48,39 +51,265 @@ const struct dfa::transition & dfa::state::get_transition(char ch) const {
 
 
 
-#define END_THROW(it) if(it == line_it->cend()) \
+/*
+ *  --- [DFA] ---
+ */
+
+
+std::string dfa::dfa::read_input(const std::string & path) {
+
+    const constexpr int page_size = 4096;
+    char buf[page_size];
+    std::string input;
+
+    std::ifstream ifs(path);
+    if (ifs.is_open() == false) {
+        throw std::runtime_error("Failed to open input path.");
+    }
+
+    while (ifs.read(buf, page_size) || ifs.gcount() > 0) {
+        input.append(buf, ifs.gcount());
+    }
+
+    ifs.close();
+    return input;
+}
+
+
+std::vector<std::string> dfa::dfa::read_table(const std::string & path) {
+
+    std::vector<std::string> lines;
+    std::string line;
+
+    std::ifstream ifs(path);
+    if (ifs.is_open() == false) {
+        throw std::runtime_error("Failed to open table path.");
+    }
+
+    while(std::getline(ifs, line) || ifs.gcount() > 0) {
+        if (line.empty() || line[0] == '#') continue;
+        else lines.emplace_back(line);
+    }
+
+    return lines;
+}
+
+
+#define END_THROW(cur, end) if(cur == end) \
                         throw std::runtime_error("Unexpected end of line.");
+#define BAD_THROW(part) throw std::runtime_error( \
+                            std::string("Bad table format in ") + part);
 
 
-void dfa::automata::build_state_symtab(const std::vector<std::string> & lines) {
+//get next character of a `.ll` file line, accommodating for escape backslashes
+char dfa::dfa::next_char(std::string::const_iterator & cur,
+                         std::string::const_iterator & end) {
 
+    if (cur == end) return '\0';
+    char ch = *cur;
+    bool escape = (*cur == '\\') ? true : false;
+    
+    ++cur;
+    if (escape == false) return ch;
+
+    if (cur == end) return '\0';
+    ch = *cur;
+    cur++;
+    
+
+    switch(ch) {
+        case 'n': return '\n';
+        case 't': return '\t';
+        case 'v': return '\v';
+        case 'r': return '\r';
+        case 'f': return '\f';
+        case 'b': return '\b';
+        case 'a': return '\a';
+        case '\\': return '\\';
+        case '*': return '*'; 
+        default: throw std::runtime_error("Improper escape character.");
+    }
+}
+
+
+std::string dfa::dfa::next_symbol(std::string::const_iterator & cur,
+                                  std::string::const_iterator & end,
+                                  char delim) {
+    END_THROW(cur, end)
+    auto sym_end = std::find(cur, end, delim);
+
+    //if reached end of line before the delimeter
+    if (sym_end == end) {
+        sym_end--;
+        std::string sym(cur, sym_end);
+        if (sym == "end") return sym;
+        BAD_THROW("symbol EOL")
+
+    //else reached the delimeter
+    } else {
+        std::string sym(cur, sym_end--);
+        cur = sym_end;
+        cur++;
+        cur++;
+        return sym;
+    }
+}
+
+
+dfa::key dfa::dfa::next_key(std::string::const_iterator & cur,
+                            std::string::const_iterator & end) {
+
+    using one_key = std::variant<char, std::pair<char, char>>;
+    using range = std::pair<char, char>;
+
+    #define HAS(T, k) std::holds_alternative<T>(k)
+
+    enum last {
+        CHAR = 0,
+        RANGE = 1,
+        COMMA = 2,
+        START = 3,
+    };
+    enum last last = START;
+
+    key key;
+    one_key _key;
+
+
+    while (true) {
+
+        END_THROW(cur, end);
+        char ch = this->next_char(cur, end);
+
+        switch (ch) {
+            case ':':
+                if (last == CHAR) {
+                    key.emplace_back(_key);
+                    goto _next_key_done;
+                } else {
+                    BAD_THROW("key");
+                }
+                goto _next_key_done;
+            
+            case '-':
+                if (last != CHAR) BAD_THROW("key")
+                last = RANGE;
+                break;
+
+            case ',':
+                if (last != CHAR) BAD_THROW("key")
+                key.emplace_back(_key);
+                _key = '\0';
+                last=COMMA;
+                break;
+
+            default:
+                if ((ch < 0x30) || (ch > 0x7d) || (HAS(range, _key)))
+                    BAD_THROW("key")
+
+                if (HAS(char, _key) && std::get<char>(_key) != 0)
+                    _key = range(std::get<char>(_key), ch);
+                else _key = ch;
+                last=CHAR;
+                break;
+                
+        } //end switch
+    
+    } //end while
+
+    _next_key_done:
+    return key;
+}
+
+
+std::vector<int> dfa::dfa::next_actions(std::string::const_iterator & cur,
+                                        std::string::const_iterator & end) {
+
+
+    //actions
+    std::vector<int> actions;
+    std::string idx;
+
+    enum last {
+        DIGIT = 0,
+        COMMA = 1,
+        START = 2,
+    };
+    enum last last = START;
+
+
+    while(true) {
+
+        char ch = this->next_char(cur, end);
+
+        //if reached EOL
+        if (ch == '\0') {
+            switch (last) {
+                case START:
+                    goto _next_actions_done;
+                case COMMA:
+                    BAD_THROW("actions - format")
+                case DIGIT:
+                    actions.push_back(std::stoi(idx));
+                    goto _next_actions_done;
+            }
+        } //end if
+
+        if (last == COMMA || last == START) {
+            if ((ch < 0x30) || (ch > 0x39)) BAD_THROW("actions - not a digit")
+            idx = std::string() + ch;
+        } else if (last == DIGIT) {
+            if (ch == ',') {
+                actions.push_back(std::stoi(idx));
+                last = COMMA;
+            } else if ((ch >= 0x30) && (ch <= 0x39)) {
+                idx += ch;
+                last = DIGIT;
+            } else BAD_THROW("actions - invalid character")
+        } //end if
+        
+    } //end while
+
+    _next_actions_done:
+    return actions;
+}
+
+
+dfa::symtab dfa::dfa::build_symtab(const std::string & path) {
+
+    auto lines = this->read_table(path);
+    ::dfa::symtab symtab;
+
+    int idx = 0;
     for (auto line_it = lines.cbegin(); line_it != lines.cend(); ++line_it) {
 
-        auto sym_end = std::find(line_it->cbegin(), line_it->cend(), ' ');
-        END_THROW(sym_end);
-        std::string sym(line_it->cbegin(), sym_end--);
+        auto cur = line_it->cbegin();
+        auto end = line_it->cend();
+        std::string sym = this->next_symbol(cur, end, ' ');
     
-        if (this->symtab.find(*line_it) == this->symtab.end()) {
-            this->symtab.emplace(*line_it, 0);
+        if (symtab.find(sym) == this->symtab.end()) {
+            symtab.emplace(sym, idx);
+            ++idx;
         } else {
             throw std::runtime_error("Duplicate state definition.");
         }
     } //end for
 
-    return;
+    return symtab;
 }
 
 
-std::map<int, struct dfa::state>
-    dfa::automata::build_table(const std::vector<std::string> & lines) {
+dfa::table dfa::dfa::build_table(const std::string & path) {
 
     /*
      *  Behold, the inline parser.
      */
 
+    auto lines = this->read_table(path);
+
     #define NEXT_CHAR str_it++; END_THROW(str_it)
 
-    std::map<int, struct dfa::state> state_table;
+    std::map<int, ::dfa::state> state_table;
     int state_idx = 0;
     
     for (auto line_it = lines.cbegin(); line_it != lines.cend(); ++line_it) {
@@ -100,7 +329,7 @@ std::map<int, struct dfa::state>
         NEXT_CHAR
 
 
-        std::map<key, struct transition> transitions;
+        dfa::state state;
 
         //every state transition
         while (str_it != line_it->cend()) {
@@ -126,9 +355,17 @@ std::map<int, struct dfa::state>
                         range = std::pair<char, char>
                                     (std::get<char>(range), *str_it);
                         key.emplace_back(range);
+                        NEXT_CHAR;
+                        if (*str_it == ':')
+                            run_loop = false;
+                        if (*str_it != ',')
+                            throw std::runtime_error("Invalid range");
+                        NEXT_CHAR;
                         break;
 
                     case ',':
+                        key.emplace_back(range);
+                        NEXT_CHAR;
                         break;
 
                     default:
@@ -147,7 +384,7 @@ std::map<int, struct dfa::state>
             auto to_idx_it = this->symtab.find(to_sym);
             if (to_idx_it == this->symtab.end())
                 throw std::runtime_error("Symbol not found.");
-            NEXT_CHAR
+            str_it = sym_end;
             NEXT_CHAR
 
 
@@ -156,35 +393,39 @@ std::map<int, struct dfa::state>
             std::string idx;
             run_loop = true;
 
-            while(run_loop) {
+            //skip if end-of-line & no actions
+            str_it++;
+            if (str_it != line_it->cend()) {
 
-                idx = "";
-                idx += *str_it;
+                while(run_loop) {
 
-                do {
-                    str_it++;
-                    if (str_it == line_it->cend()) { run_loop = false; break; }
-                    else if (*str_it == ' ') { run_loop = false; break; }
-                    else if (*str_it >= 0x30 && *str_it <= 0x39) idx += *str_it;
-                    else if (*str_it == ',') break;
-                } while (true);
+                    idx = "";
+                    if (*str_it == ' ') { NEXT_CHAR; break; }
+                    idx += *str_it;
 
-                action_idxs.push_back(std::stoi(idx));
+                    do {
+                        str_it++;
+                        if (str_it == line_it->cend()) { run_loop = false; break; }
+                        else if (*str_it == ' ') { NEXT_CHAR; run_loop = false; break; }
+                        else if (*str_it >= 0x30 && *str_it <= 0x39) idx += *str_it;
+                        else if (*str_it == ',') { NEXT_CHAR; break; }
+                    } while (true);
+
+                    action_idxs.push_back(std::stoi(idx));
             
-            } //end while
-
+                } //end while
+            } //end if
 
             //construct the transition
             struct transition transition(from_idx_it->second,
                                          to_idx_it->second,
                                          action_idxs);
-            transitions.emplace(key, transition);
+            state.emplace(key, transition);
 
         } //end while (every transition)
 
 
         //add state to state table
-        struct state state(transitions);
         state_table[state_idx] = state;
         ++state_idx;
 
@@ -193,49 +434,6 @@ std::map<int, struct dfa::state>
     return state_table;
 }
 
-
-_STATIC const constexpr int page_size = 4096;
-
-
-void dfa::automata::read_input(const std::string path) {
-
-    char buf[page_size];
-
-    std::ifstream ifs(path);
-    if (ifs.is_open() == false) {
-        throw std::runtime_error("Failed to open input path.");
-    }
-
-    while (ifs.read(buf, page_size) || ifs.gcount() > 0) {
-        this->input.append(buf, ifs.gcount());
-    }
-
-    ifs.close();
-    return;
-}
-
-
-
-std::map<int, struct dfa::state>
-    dfa::automata::read_table(const std::string path) {
-
-    std::vector<std::string> lines;
-    std::string line;
-
-    std::ifstream ifs(path);
-    if (ifs.is_open() == false) {
-        throw std::runtime_error("Failed to open table path.");
-    }
-
-    while(std::getline(ifs, line) || ifs.gcount() > 0) {
-        if (line[0] == '#') continue;
-        else lines.emplace_back(line);
-    }
-
-    build_state_symtab(lines);
-
-    return build_table(lines); //tail call
-}
 
 
 void dfa::automata::evaluate(void * ctx) {
@@ -250,7 +448,8 @@ void dfa::automata::evaluate(void * ctx) {
     //while there is input available
     while (str_it != this->input.cend()) {
 
-        auto & transition = current->second.get_transition(*str_it);
+        //get appropriate transition
+        auto & transition = this->get_transition(current->second, *str_it);
 
         //run each action for this transition
         for (auto act_it = transition.action_idxs.cbegin();

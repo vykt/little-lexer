@@ -30,47 +30,50 @@ struct transition {
 
 
 using key = std::vector<std::variant<char, std::pair<char, char>>>;
+using state = std::map<key, transition>;
+using symtab = std::map<std::string, int>;
+using table = std::map<int, state>;
 
 
-struct state {
-
-    //attributes
-    std::map<key, struct transition> transitions;
-
-    //methods
-    state(const std::map<key, struct transition> transitions)
-     : transitions(transitions) {}
-
-    const struct transition & get_transition(char ch) const;
-};
-
-
-class automata {
+class dfa {
 
   _PRIVATE:
-    //attributes
-    std::map<std::string, int> symtab;
-    const std::vector<std::function<void(char, void *)>> actions;
-    std::string input;
-    
     //methods
-    void build_state_symtab(const std::vector<std::string> & lines);
-    std::map<int, struct dfa::state>
-        build_table(const std::vector<std::string> & lines);
+    std::string read_input(const std::string & path);
+    std::vector<std::string> read_table(const std::string & path);
 
-    void read_input(const std::string path);
-    std::map<int, struct state> read_table(const std::string path);
+    // -- parsing table (`.ll` file)
+    char next_char(std::string::const_iterator & cur,
+                   std::string::const_iterator & end);
+    std::string next_symbol(std::string::const_iterator & cur,
+                            std::string::const_iterator & end,
+                            char delim);
+    key next_key(std::string::const_iterator & cur,
+                 std::string::const_iterator & end);
+    std::vector<int> next_actions(std::string::const_iterator & cur,
+                                  std::string::const_iterator & end);
 
-    
+    symtab build_symtab(const std::string & path);
+    table build_table(const std::string & path);
+
+    const transition & get_transition(const state & node, char ch) const;
 
   public:
     //attributes
-    const std::map<int, struct state> table;
+    const symtab symtab;
+    const std::vector<std::function<void(char, void *)>> actions;
+    const std::map<int, state> table;
+    const std::string input;
 
     //methods
-    automata(const std::string transition_table_path,
-             const std::string input_path,
-             const std::vector<std::function<void(char, void *)>> & actions);
+    dfa(const std::string table_path,
+        const std::string input_path,
+        const std::vector<std::function<void(char, void *)>> & actions)
+    : symtab(build_symtab(table_path)),
+      actions(actions),
+      table(build_table(table_path)),
+      input(read_input(input_path)) {}
+    
     void evaluate(void * ctx);
 };
 

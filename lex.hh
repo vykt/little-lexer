@@ -19,7 +19,7 @@ enum type {
 };
 
 
-std::map<enum type, std::string> typetab() {
+inline std::map<enum type, std::string> typetab() {
     return {
         {FOO, "FOO"},
         {BAR, "BAR"},
