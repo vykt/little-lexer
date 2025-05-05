@@ -52,29 +52,48 @@
 #  SET LABEL   11
 #
 
-start~i$if_0$1~e$else_0$1~g$goto_0$1~0-9$imm_0$1~+,-,=,/,*,>,<,$arith_0$1~($start$6,1,0~)$start$7,1,0~A-Z,a-d,f,h-u,w-z$type_0$1~\n$start$~@$end$
+#0
+start~i$if_0$1~e$else_0$1~g$goto_0$1~0_9$imm_0$1~+,-,=,/,*,>,<$arith_0$1~($start$6,1,0~)$start$7,1,0~v$type_0$1~A_Z,a_d,f,h_u,w_z$var_0$1~ $start$~\n$start$~@$end$
 
-type_0~a$type_1$1~A-Z,b-z$var_0$1~ $start$3,0~:$start$11,0
-type_1~r$type_1$1~A-Z,a-q,s-z$var_0$1~ $start$3,0~:$start$11,0
-type_2~ $start$2,0~A-Z,a-z$var_0$1
+#1
+type_0~a$type_1$1~A_Z,b_z$var_0$1~ $start$3,0~:$start$11,0
+#2
+type_1~r$type_2$1~A_Z,a_q,s_z$var_0$1~ $start$3,0~:$start$11,0
+#3
+type_2~ $start$2,0~A_Z,a_z$var_0$1
 
-var_0~A-Z,a-z$var_0,1~ $start$3,0~:$start$11,0
-imm_0~0-9$imm_0$1~ $start$4,0
+#4
+var_0~A_Z,a_z$var_0$1~ $start$3,0~:$start$11,0
+#5
+imm_0~0_9$imm_0$1~ $start$4,0
 
-arith_0=,<,>$arith_1$1~ $start$5,0
-arith_1 $start$5,0
+#6
+arith_0~=,<,>$arith_1$1~ $start$5,0
+#7
+arith_1~ $start$5,0
 
-if_0~f$if_1$1~a-Z,a-e,g-z$var_0$1~ $start$3,0~:$start$11,0
-if_1~ $start$8,0~A-Z,a-z$var_0$1
+#8
+if_0~f$if_1$1~a_Z,a_e,g_z$var_0$1~ $start$3,0~:$start$11,0
+#9
+if_1~ $start$8,0~A_Z,a_z$var_0$1
 
-else_0~l$else_1$1~A-Z,a-k,m-z$var_0$1~ $start$3,0~:$start$11,0
-else_1~s$else_2$1~A-Z,a-r,t-z$var_0$1~ $start$3,0~:$start$11,0
-else_2~e$else_3$1~A-Z,a-d,f-z$var_0$1~ $start$3,0~:$start$11,0
-else_3~ $start$9,0~A-Z,a-z$var_0$1
+#10
+else_0~l$else_1$1~A_Z,a_k,m_z$var_0$1~ $start$3,0~:$start$11,0
+#11
+else_1~s$else_2$1~A_Z,a_r,t_z$var_0$1~ $start$3,0~:$start$11,0
+#12
+else_2~e$else_3$1~A_Z,a_d,f_z$var_0$1~ $start$3,0~:$start$11,0
+#13
+else_3~ $start$9,0~A_Z,a_z$var_0$1
 
-goto_0~o$goto_1$1~A-Z,a-n,p-z$var_0$1~ $start$3,0~:$start$11,0
-goto_0~t$goto_1$1~A-Z,a-s,u-z$var_0$1~ $start$3,0~:$start$11,0
-goto_0~o$goto_1$1~A-Z,a-n,p-z$var_0$1~ $start$3,0~:$start$11,0
-goto_0~ $start$10,0~A-Z,a-z$var_0$1
+#14
+goto_0~o$goto_1$1~A_Z,a_n,p_z$var_0$1~ $start$3,0~:$start$11,0
+#15
+goto_1~t$goto_2$1~A_Z,a_s,u_z$var_0$1~ $start$3,0~:$start$11,0
+#16
+goto_2~o$goto_3$1~A_Z,a_n,p_z$var_0$1~ $start$3,0~:$start$11,0
+#17
+goto_3~ $start$10,0~A_Z,a_z$var_0$1
 
+#18
 end

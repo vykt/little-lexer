@@ -27,15 +27,16 @@ enum type {
 
 inline std::map<enum type, std::string> typetab() {
     return {
-        {TYPE, "Type"},
-        {VAR, "Variable"},
-        {ARITH, "Arithmetic op."},
-        {OP_BRACK, "Open bracket"},
-        {CL_BRACK, "Close bracket"},
-        {IF, "If"},
-        {ELSE, "Else"},
-        {GOTO, "Go-to"},
-        {LABEL, "Label"}
+        {TYPE,     "Type          "},
+        {VAR,      "Variable      "},
+        {IMM,      "Immmediate    "},
+        {ARITH,    "Arithmetic op."},
+        {OP_BRACK, "Open bracket  "},
+        {CL_BRACK, "Close bracket "},
+        {IF,       "If            "},
+        {ELSE,     "Else          "},
+        {GOTO,     "Go-to         "},
+        {LABEL,    "Label         "}
     };
 }
 

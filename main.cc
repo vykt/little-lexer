@@ -25,7 +25,7 @@ int main(int argc, char ** argv) {
     auto typetab = lex::typetab();
     for (auto it = tokens.cbegin(); it != tokens.cend(); ++it) {
         std::cout << "OPCODE: " << typetab[it->kind]
-                  << ", LEXEME: " << it->lexeme << std::endl; 
+                  << " LEXEME: " << it->lexeme << std::endl; 
     }
 
     return 0;

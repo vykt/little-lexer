@@ -20,12 +20,11 @@ _STATIC void cout_key(std::variant<char, std::pair<char, char>> key) {
 
     if (std::holds_alternative<std::pair<char,char>>(key)) {
         auto pair = std::get<std::pair<char, char>>(key);
-        std::cout << "['" << pair.first << "','"
-                  << pair.second << "']" << std::endl;
+        std::cout << "['" << pair.first << "','" << pair.second << "']";
     } else if (std::holds_alternative<char>(key)) {
-        std::cout << "'" << std::get<char>(key) << "'" << std::endl;
+        std::cout << "'" << std::get<char>(key) << "'";
     } else {
-        std::cout << "<empty>" << std::endl;
+        std::cout << "<empty>";
     }
 }
 
@@ -44,9 +43,6 @@ const struct dfa::transition & dfa::dfa::get_transition(
 
         //for every variant in this key
         for (auto var_it = key.cbegin(); var_it != key.cend(); ++var_it) {
-
-            std::cout << "cmp: '" << ch << "' vs '";
-            cout_key(*var_it);
 
             if (std::holds_alternative<char>(*var_it)) {
                 if (std::get<char>(*var_it) == ch)
@@ -204,6 +200,7 @@ dfa::key_t dfa::dfa::next_key(std::string::const_iterator & cur,
     key_t key;
     one_key _key;
 
+    std::cout << " key: ";
 
     while (true) {
 
@@ -214,13 +211,14 @@ dfa::key_t dfa::dfa::next_key(std::string::const_iterator & cur,
             case _SEC_DELIM:
                 if (last == CHAR) {
                     key.emplace_back(_key);
+                    cout_key(_key);
                     goto _next_key_done;
                 } else {
                     BAD_THROW("key");
                 }
                 goto _next_key_done;
             
-            case '-':
+            case '_':
                 if (last != CHAR) BAD_THROW("key - invalid format")
                 last = RANGE;
                 break;
@@ -230,6 +228,7 @@ dfa::key_t dfa::dfa::next_key(std::string::const_iterator & cur,
                 key.emplace_back(_key);
                 _key = '\0';
                 last=COMMA;
+                std::cout << ". ";
                 break;
 
             default:
@@ -266,6 +265,7 @@ std::vector<int> dfa::dfa::next_actions(std::string::const_iterator & cur,
     };
     enum last last = START;
 
+    std::cout << " | acts: ";
 
     while(true) {
 
@@ -280,6 +280,7 @@ std::vector<int> dfa::dfa::next_actions(std::string::const_iterator & cur,
                     BAD_THROW("actions - format")
                 case DIGIT:
                     actions.push_back(std::stoi(idx));
+                    std::cout << std::stoi(idx) << " ";
                     goto _next_actions_done;
             }
         } //end if
@@ -291,6 +292,7 @@ std::vector<int> dfa::dfa::next_actions(std::string::const_iterator & cur,
         } else if (last == DIGIT) {
             if (ch == ',') {
                 actions.push_back(std::stoi(idx));
+                std::cout << std::stoi(idx) << " ";
                 last = COMMA;
             } else if ((ch >= 0x30) && (ch <= 0x39)) {
                 idx += ch;
@@ -351,8 +353,12 @@ dfa::table_t dfa::dfa::build_table(const std::string & path) {
             throw std::runtime_error("Symbol not found.");
         if (from_sym == "end") goto _build_table_done;
 
+        std::cout << "\nstate: " << from_sym << std::endl;
+
         //every transition
         while (cur != end) {
+
+            std::cout << "\t";
 
             key_t key = this->next_key(cur, end);
 
@@ -360,12 +366,15 @@ dfa::table_t dfa::dfa::build_table(const std::string & path) {
             auto to_idx_it = this->symtab.find(to_sym);
             if (to_idx_it == this->symtab.end())
                 throw std::runtime_error("Symbol not found.");
+            std::cout << " | sym: " << to_sym;
 
             auto actions = next_actions(cur, end);
 
             transition transition(
                            from_idx_it->second, to_idx_it->second, actions);
             state.emplace(key, transition);
+
+            std::cout << std::endl;
 
         } //end while
 
@@ -394,16 +403,17 @@ void dfa::dfa::evaluate(void * ctx) {
 
         //get appropriate transition
         auto & transition = this->get_transition(state->second, *cur);
-        std::cout << "From " << transition.from_idx << " to "
-                  << transition.to_idx << std::endl;
+        std::cout << *cur << ": " << transition.from_idx << "->"
+                  << transition.to_idx << " [ ";
 
         //run each action for this transition
         for (auto act = transition.actions.cbegin();
              act != transition.actions.cend(); ++act) {
 
-            std::cout << "Running action " << *act << std::endl;
+            std::cout << *act << " ";
             this->actions[*act](*cur, ctx);
         }
+        std::cout << "]" << std::endl;
 
         //change state
         state = this->table.find(transition.to_idx);

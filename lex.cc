@@ -17,8 +17,8 @@ void lex::lex_state::add_token() {
     auto typetab = lex::typetab();
     tokens.emplace_back(lex::token(this->cur_kind, this->cur_lexeme));
 
-    std::cout << "added token: " << this->cur_lexeme << " | type: "
-              << typetab[this->cur_kind] << std::endl;
+    //std::cout << "added token: " << this->cur_lexeme << " | type: "
+    //          << typetab[this->cur_kind] << std::endl;
     this->cur_lexeme.clear();
 
     return;
