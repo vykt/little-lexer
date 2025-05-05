@@ -15,6 +15,21 @@
 #include <iostream>
 
 
+//debug
+_STATIC void cout_key(std::variant<char, std::pair<char, char>> key) {
+
+    if (std::holds_alternative<std::pair<char,char>>(key)) {
+        auto pair = std::get<std::pair<char, char>>(key);
+        std::cout << "['" << pair.first << "','"
+                  << pair.second << "']" << std::endl;
+    } else if (std::holds_alternative<char>(key)) {
+        std::cout << "'" << std::get<char>(key) << "'" << std::endl;
+    } else {
+        std::cout << "<empty>" << std::endl;
+    }
+}
+
+
 /*
  *  --- [TRANSITION] ---
  */
@@ -30,6 +45,9 @@ const struct dfa::transition & dfa::dfa::get_transition(
         //for every variant in this key
         for (auto var_it = key.cbegin(); var_it != key.cend(); ++var_it) {
 
+            std::cout << "cmp: '" << ch << "' vs '";
+            cout_key(*var_it);
+
             if (std::holds_alternative<char>(*var_it)) {
                 if (std::get<char>(*var_it) == ch)
                     return key_it->second;
@@ -40,11 +58,11 @@ const struct dfa::transition & dfa::dfa::get_transition(
                     return key_it->second;
                 else goto _continue;
             }
+
+            _continue:
+            continue;
             
         } //end for every variant in key
-
-        _continue:
-        continue;
         
     } //end for every key
 
@@ -376,15 +394,20 @@ void dfa::dfa::evaluate(void * ctx) {
 
         //get appropriate transition
         auto & transition = this->get_transition(state->second, *cur);
+        std::cout << "From " << transition.from_idx << " to "
+                  << transition.to_idx << std::endl;
 
         //run each action for this transition
         for (auto act = transition.actions.cbegin();
              act != transition.actions.cend(); ++act) {
+
+            std::cout << "Running action " << *act << std::endl;
             this->actions[*act](*cur, ctx);
         }
 
         //change state
         state = this->table.find(transition.to_idx);
+        cur++;
         STATE_THROW
         
     } //end while

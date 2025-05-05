@@ -12,19 +12,30 @@
 namespace lex {
 
 enum type {
-    FOO = 1,
-    BAR = 2,
-    BAZ = 3,
-    QUX = 4
+    TYPE = 0,
+    VAR = 1,
+    IMM = 2,
+    ARITH = 3,
+    OP_BRACK = 4,
+    CL_BRACK = 5,
+    IF = 6,
+    ELSE = 7,
+    GOTO = 8,
+    LABEL = 9
 };
 
 
 inline std::map<enum type, std::string> typetab() {
     return {
-        {FOO, "FOO"},
-        {BAR, "BAR"},
-        {BAZ, "BAZ"},
-        {QUX, "QUX"}
+        {TYPE, "Type"},
+        {VAR, "Variable"},
+        {ARITH, "Arithmetic op."},
+        {OP_BRACK, "Open bracket"},
+        {CL_BRACK, "Close bracket"},
+        {IF, "If"},
+        {ELSE, "Else"},
+        {GOTO, "Go-to"},
+        {LABEL, "Label"}
     };
 }
 
@@ -87,10 +98,15 @@ class lexer {
 void save_token(char ch, void * ctx);
 void append_char(char ch, void * ctx);
 
-void set_kind_foo(char ch, void * ctx);
-void set_kind_bar(char ch, void * ctx);
-void set_kind_baz(char ch, void * ctx);
-void set_kind_qux(char ch, void * ctx);
-
+void set_kind_type(char ch, void * ctx);
+void set_kind_var(char ch, void * ctx);
+void set_kind_imm(char ch, void * ctx);
+void set_kind_arith(char ch, void * ctx);
+void set_kind_op_brack(char ch, void * ctx);
+void set_kind_cl_brack(char ch, void * ctx);
+void set_kind_if(char ch, void * ctx);
+void set_kind_else(char ch, void * ctx);
+void set_kind_goto(char ch, void * ctx);
+void set_kind_label(char ch, void * ctx);
 
 } //namespace `lex`

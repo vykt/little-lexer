@@ -1,0 +1,9 @@
+entry: 
+  var foo = 5 + 7 
+  var bar = foo * 2 
+  if ( foo >= bar ) goto good 
+  else goto bad 
+good: 
+  var baz = foo - bar 
+bad:
+  var baz = bar - foo 

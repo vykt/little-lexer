@@ -3,14 +3,14 @@
 # state 1, etc. Evaluation starts at `start` uid, and terminates at the
 # state with uid `end`.
 #
-# State format:
+# [State format]:
 #
-#   [uid] [transition 1] <transition n>
+#   [uid]~[transition 1]~<transition n>
 #
 # Where uid and each transition is space separated, and a transition
 # consists of:
 #
-#   [char/char range]:[next state]:[action function index]
+#   [char/char range]$[next state]$[action function index]
 #
 # Where char/char range, action function index can list multiple values
 # with commas.
@@ -28,25 +28,53 @@
 #   > Transition 3 accepts characters B and C, moves to state eg_4; and
 #     performs action 1.
 #
-# Special characters:
+# [Special characters]:
 #
 # ~ - section separator 
 # $ - transition section separator
 # @ - EOF
 #
+#
+# [Current actions]:
+#
+#  SAVE_TOKEN   0
+#  APPEND_CHAR  1
+#
+#  SET TYPE     2
+#  SET VAR      3
+#  SET IMM      4
+#  SET ARITH =  5
+#  SET OP_BRACK 6
+#  SET CL_BRACK 7
+#  SET IF       8
+#  SET ELSE     9
+#  SET GOTO    10
+#  SET LABEL   11
+#
 
-start~f-g,F,\n$foo_1$10,2~b,B$barbaz_1$1~q,Q$qux_1$1,5~ $start$~@$end$
+start~i$if_0$1~e$else_0$1~g$goto_0$1~0-9$imm_0$1~+,-,=,/,*,>,<,$arith_0$1~($start$6,1,0~)$start$7,1,0~A-Z,a-d,f,h-u,w-z$type_0$1~\n$start$~@$end$
 
-#foo states
-foo_1~o,O$foo_2$1
-foo_2~o,O$start$1,0
+type_0~a$type_1$1~A-Z,b-z$var_0$1~ $start$3,0~:$start$11,0
+type_1~r$type_1$1~A-Z,a-q,s-z$var_0$1~ $start$3,0~:$start$11,0
+type_2~ $start$2,0~A-Z,a-z$var_0$1
 
-#bar & baz states
-barbaz_1~a,A$barbaz_2$1
-barbaz_2~r,R$start$1,3,0~z,Z$start$1,4,0
+var_0~A-Z,a-z$var_0,1~ $start$3,0~:$start$11,0
+imm_0~0-9$imm_0$1~ $start$4,0
 
-#qux states
-qux_1~u,U$qux_2$1
-qux_2~x,X$start$1,0
+arith_0=,<,>$arith_1$1~ $start$5,0
+arith_1 $start$5,0
+
+if_0~f$if_1$1~a-Z,a-e,g-z$var_0$1~ $start$3,0~:$start$11,0
+if_1~ $start$8,0~A-Z,a-z$var_0$1
+
+else_0~l$else_1$1~A-Z,a-k,m-z$var_0$1~ $start$3,0~:$start$11,0
+else_1~s$else_2$1~A-Z,a-r,t-z$var_0$1~ $start$3,0~:$start$11,0
+else_2~e$else_3$1~A-Z,a-d,f-z$var_0$1~ $start$3,0~:$start$11,0
+else_3~ $start$9,0~A-Z,a-z$var_0$1
+
+goto_0~o$goto_1$1~A-Z,a-n,p-z$var_0$1~ $start$3,0~:$start$11,0
+goto_0~t$goto_1$1~A-Z,a-s,u-z$var_0$1~ $start$3,0~:$start$11,0
+goto_0~o$goto_1$1~A-Z,a-n,p-z$var_0$1~ $start$3,0~:$start$11,0
+goto_0~ $start$10,0~A-Z,a-z$var_0$1
 
 end

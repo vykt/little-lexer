@@ -8,10 +8,17 @@
 #include "lex.hh"
 
 
+//TODO DEBUG
+#include <iostream>
+
 
 void lex::lex_state::add_token() {
 
+    auto typetab = lex::typetab();
     tokens.emplace_back(lex::token(this->cur_kind, this->cur_lexeme));
+
+    std::cout << "added token: " << this->cur_lexeme << " | type: "
+              << typetab[this->cur_kind] << std::endl;
     this->cur_lexeme.clear();
 
     return;
@@ -53,32 +60,68 @@ void lex::append_char(char ch, void * ctx) {
     ls->append_char(ch);
 }
 
-void lex::set_kind_foo(char ch, void * ctx) {
+void lex::set_kind_type(char ch, void * ctx) {
     CAST_CTX
-    ls->set_kind(lex::FOO);
+    ls->set_kind(lex::TYPE);
 }
 
-void lex::set_kind_bar(char ch, void * ctx) {
+void lex::set_kind_var(char ch, void * ctx) {
     CAST_CTX
-    ls->set_kind(lex::BAR);
+    ls->set_kind(lex::VAR);
 }
 
-void lex::set_kind_baz(char ch, void * ctx) {
+void lex::set_kind_imm(char ch, void * ctx) {
     CAST_CTX
-    ls->set_kind(lex::BAZ);
+    ls->set_kind(lex::IMM);
 }
 
-void lex::set_kind_qux(char ch, void * ctx) {
+void lex::set_kind_arith(char ch, void * ctx) {
     CAST_CTX
-    ls->set_kind(lex::QUX);
+    ls->set_kind(lex::ARITH);
+}
+
+void lex::set_kind_op_brack(char ch, void * ctx) {
+    CAST_CTX
+    ls->set_kind(lex::OP_BRACK);
+}
+
+void lex::set_kind_cl_brack(char ch, void * ctx) {
+    CAST_CTX
+    ls->set_kind(lex::CL_BRACK);
+}
+
+void lex::set_kind_if(char ch, void * ctx) {
+    CAST_CTX
+    ls->set_kind(lex::IF);
+}
+
+void lex::set_kind_else(char ch, void * ctx) {
+    CAST_CTX
+    ls->set_kind(lex::ELSE);
+}
+
+void lex::set_kind_goto(char ch, void * ctx) {
+    CAST_CTX
+    ls->set_kind(lex::GOTO);
+}
+
+void lex::set_kind_label(char ch, void * ctx) {
+    CAST_CTX
+    ls->set_kind(lex::LABEL);
 }
 
 
 const std::vector<std::function<void(char, void *)>> lex::lex_actions = {
     lex::save_token,
     lex::append_char,
-    lex::set_kind_foo,
-    lex::set_kind_bar,
-    lex::set_kind_baz,
-    lex::set_kind_qux
+    lex::set_kind_type,
+    lex::set_kind_var,
+    lex::set_kind_imm,
+    lex::set_kind_arith,
+    lex::set_kind_op_brack,
+    lex::set_kind_cl_brack,
+    lex::set_kind_if,
+    lex::set_kind_else,
+    lex::set_kind_goto,
+    lex::set_kind_label
 };
